@@ -20,6 +20,7 @@ namespace FileDemo_1734
 
         static void Main(string[] args)
         {
+            //讀取config.json，並將config.json反序列化成config物件
             string jsonConfig = File.ReadAllText("config.json");
             Config config = JsonSerializer.Deserialize<Config>(jsonConfig);
 
