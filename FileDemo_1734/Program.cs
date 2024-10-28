@@ -23,6 +23,13 @@ namespace FileDemo_1734
             string jsonConfig = File.ReadAllText("config.json");
             Config config = JsonSerializer.Deserialize<Config>(jsonConfig);
 
+            // 設定監控目錄位置。@符號表示這是一個逐字字串，可以直接使用反斜線而不用加上跳脫字符
+            string monitorDirectory = @"C:\temp\TEST";
+            config.DirectoryPath = monitorDirectory;
+
+            // 檢查並建立目錄和檔案
+            FolderFileCreate(monitorDirectory, config.FilesToMonitor);
+
             Console.WriteLine("正在監控目錄: " + config.DirectoryPath);
             DisplayMonitoredFiles(config.FilesToMonitor);
 
@@ -57,6 +64,36 @@ namespace FileDemo_1734
             while (Console.Read() != 'q') ;
         }
 
+        /// <summary>
+        /// 檢查目錄、檔案是否存在
+        /// </summary>
+        /// <param name="directoryPath"></param>
+        /// <param name="filesToMonitor"></param>
+        private static void FolderFileCreate(string directoryPath, string[] filesToMonitor)
+        {
+            // 檢查並建立目錄
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+                Console.WriteLine($"已建立目錄: {directoryPath}");
+            }
+
+            // 檢查並建立檔案 
+            foreach (var file in filesToMonitor)
+            {
+                string filePath = Path.Combine(directoryPath, file);
+                if (!File.Exists(filePath))
+                {
+                    File.Create(filePath).Dispose(); // 建立檔案並立即釋放
+                    Console.WriteLine($"已建立檔案: {filePath}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 每30秒顯示一次監控檔案
+        /// </summary>
+        /// <param name="state"></param>
         private static void DisplayFiles(object state)
         {
             string[] filesToMonitor = (string[])state;
@@ -64,6 +101,10 @@ namespace FileDemo_1734
             DisplayMonitoredFiles(filesToMonitor);
         }
 
+        /// <summary>
+        /// 正在監控檔案
+        /// </summary>
+        /// <param name="filesToMonitor"></param>
         private static void DisplayMonitoredFiles(string[] filesToMonitor)
         {
             foreach (var file in filesToMonitor)
@@ -72,6 +113,11 @@ namespace FileDemo_1734
             }
         }
 
+        /// <summary>
+        /// 檔案的變動方法
+        /// </summary>
+        /// <param name="e"></param>
+        /// <param name="filesToMonitor"></param>
         private static void OnChanged(FileSystemEventArgs e, string[] filesToMonitor)
         {
             if (Array.Exists(filesToMonitor, file => file == Path.GetFileName(e.FullPath)))
@@ -118,7 +164,7 @@ namespace FileDemo_1734
                                 }
                             }
 
-                            FileContentSnapshots[e.FullPath] = newContent; // 更新快照
+                            FileContentSnapshots[e.FullPath] = newContent;
                             break;
                         }
                         catch (IOException)
@@ -139,6 +185,11 @@ namespace FileDemo_1734
             }
         }
 
+        /// <summary>
+        /// 檔案的刪除
+        /// </summary>
+        /// <param name="e"></param>
+        /// <param name="filesToMonitor"></param>
         private static void OnDeleted(FileSystemEventArgs e, string[] filesToMonitor)
         {
             if (Array.Exists(filesToMonitor, file => file == Path.GetFileName(e.FullPath)))
