@@ -24,11 +24,108 @@ namespace FileDemo_1734
         /// </summary>
         private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(30);
 
-        static void main(string[] args) 
+        static void Main(string[] args) 
         {
-            //設定監控位置，將json文件反序列化為C#物件
+            //讀取config.json，並將config.json反序列化成config物件
             string jsonConfig = File.ReadAllText("config.json");
             Config config = JsonSerializer.Deserialize<Config>(jsonConfig);
+
+            //設定監控位置。使用@來避免使用跳脫字符
+            string monitorDirectory = @"C:\temp\TEST";
+            config.DirectoryPath = monitorDirectory;
+
+            //檢查並建立目錄以及檔案
+            FolderFileCreate(monitorDirectory, config.FilesToMonitor);
+
+            Console.WriteLine($"正在監控目錄:{config.DirectoryPath}");
+            DisplayMonitoredFiles(config.FilesToMonitor);
+
+            //初始化每個檔案的快照
+            foreach(var file in config.FilesToMonitor)
+            {
+                string filePath = Path.Combine(config.DirectoryPath, file);
+                if (File.Exists(filePath))
+                {
+                    FileContentSnapshots[filePath] = File.ReadAllLines(filePath).ToList();
+                }
+                else 
+                {
+                    FileContentSnapshots[filePath] = new List<string>();
+                }
+            }
+
+            //啟動定時器，每隔CheckInterval所設定的秒數檢查一次檔案
+            checkFilesTimer = new Timer(CheckFileChange, config, TimeSpan.Zero, CheckInterval);
+
+            Console.WriteLine("按下 'q' 鍵結束程式。");
+            while (Console.Read() != 'q') ;
+
+            checkFilesTimer?.Dispose();
+        }
+
+        private static void FolderFileCreate(string directoryPath, string[] filesToMonitor) 
+        {
+            if(!Directory.Exists(directoryPath)) 
+            {
+                Directory.CreateDirectory(directoryPath);
+                Console.WriteLine($"已建立目錄:{directoryPath}");
+            }
+
+            foreach (var file in filesToMonitor) 
+            {
+                string filePath = Path.Combine(directoryPath, file);
+                if (!File.Exists(filePath)) 
+                {
+                    File.Create(filePath).Dispose();
+                    Console.WriteLine($"已建立檔案:{filePath}");
+                }
+            }
+        }
+
+        private static void DisplayMonitoredFiles(string[] fileToMonitor) 
+        {
+            foreach (var file in fileToMonitor)
+            {
+                Console.WriteLine($"正在監控檔案:{file}");
+            }
+        }
+
+        private static void CheckFileChange(object state) 
+        {
+            Config config = (Config)state;
+
+            foreach (var file in config.FilesToMonitor) 
+            {
+                string filePath = Path.Combine(config.DirectoryPath, file);
+
+                if (File.Exists(filePath)) 
+                {
+                    var newContent = File.ReadAllLines(filePath).ToList();
+                    var oldContent = FileContentSnapshots.GetOrAdd(filePath, new List<string>());
+
+                    if (newContent.Count > oldContent.Count)
+                    {
+                        for (int j = oldContent.Count; j < newContent.Count; j++)
+                        {
+                            Console.WriteLine($"新增的行:{newContent[j]}");
+                        }
+                    }
+                    else 
+                    {
+                        for (int j = 0; j < newContent.Count; j++) 
+                        {
+                            if (newContent[j] != oldContent[j]) 
+                            {
+                                Console.WriteLine($"修改的行: 原內容 - {oldContent[j]}, 新內容 - {newContent[j]}");
+                            }
+                        } 
+                    }
+
+                    //更新快照
+                    FileContentSnapshots[filePath] = newContent;
+                }
+
+            }
         }
     }
 }
