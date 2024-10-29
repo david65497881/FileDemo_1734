@@ -11,11 +11,22 @@ namespace FileDemo_1734
 {
     public class Program
     {
+        /// <summary>
+        /// 最後變動時間
+        /// </summary>
         private static ConcurrentDictionary<string, DateTime> LastChangedTimes = new ConcurrentDictionary<string, DateTime>();
+        /// <summary>
+        /// 避免檔案的change事件在500豪秒內重複觸發
+        /// </summary>
         private static readonly int EventSuppressTimeoutMs = 500;
+        /// <summary>
+        /// 計時器
+        /// </summary>
         private static Timer displayTimer;
 
-        // 儲存每個檔案的內容快照
+        /// <summary>
+        /// 儲存每個檔案的內容快照
+        /// </summary>
         private static ConcurrentDictionary<string, List<string>> FileContentSnapshots = new ConcurrentDictionary<string, List<string>>();
 
         static void Main(string[] args)
@@ -38,6 +49,7 @@ namespace FileDemo_1734
             foreach (var file in config.FilesToMonitor)
             {
                 string filePath = Path.Combine(config.DirectoryPath, file);
+                //file.Exists用來檢查指定的檔案路徑是否存在
                 if (File.Exists(filePath))
                 {
                     FileContentSnapshots[filePath] = File.ReadAllLines(filePath).ToList();
@@ -48,12 +60,15 @@ namespace FileDemo_1734
                 }
             }
 
+            //FileSystemWatcher是用於監控檔案系統變化的類別
             FileSystemWatcher watcher = new FileSystemWatcher
             {
-                Path = config.DirectoryPath,
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size
+                Path = config.DirectoryPath,//指定目錄
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size//狀態變化
             };
 
+            //Lambda表達式，+=用於訂閱 (source, e)是Lambda表達式的參數，OnChanged(e, config.FilesToMonitor)是Lambda表達式的主體(執行動作)
+            // =>代表執行的意思
             watcher.Changed += (source, e) => OnChanged(e, config.FilesToMonitor);
             watcher.Created += (source, e) => OnChanged(e, config.FilesToMonitor);
             watcher.Deleted += (source, e) => OnDeleted(e, config.FilesToMonitor);
@@ -75,6 +90,7 @@ namespace FileDemo_1734
             // 檢查並建立目錄
             if (!Directory.Exists(directoryPath))
             {
+                //若指定的檔案路徑不存在，CreateDirectory會自動建立
                 Directory.CreateDirectory(directoryPath);
                 Console.WriteLine($"已建立目錄: {directoryPath}");
             }
@@ -82,6 +98,7 @@ namespace FileDemo_1734
             // 檢查並建立檔案 
             foreach (var file in filesToMonitor)
             {
+                //使用 Path.Combine 方法安全地將目錄路徑和檔案名稱組合成完整的檔案路徑
                 string filePath = Path.Combine(directoryPath, file);
                 if (!File.Exists(filePath))
                 {
@@ -121,8 +138,11 @@ namespace FileDemo_1734
         /// <param name="filesToMonitor"></param>
         private static void OnChanged(FileSystemEventArgs e, string[] filesToMonitor)
         {
+            //Array.Exists 用來檢查 filesToMonitor 陣列中是否存在符合條件的檔案
+            //file => file == Path.GetFileName(e.FullPath)用來比較檔案名稱是否相等
             if (Array.Exists(filesToMonitor, file => file == Path.GetFileName(e.FullPath)))
             {
+                //避免短時間多次觸發方法
                 DateTime lastChangeTime = LastChangedTimes.GetOrAdd(e.FullPath, DateTime.MinValue);
                 if ((DateTime.Now - lastChangeTime).TotalMilliseconds > EventSuppressTimeoutMs)
                 {
@@ -130,11 +150,14 @@ namespace FileDemo_1734
 
                     Thread.Sleep(100); // 確保檔案變動完成
                     int retryCount = 3;
+                    //使用for迴圈，如果檔案被佔用，最多重試 3 次
                     for (int i = 0; i < retryCount; i++)
                     {
                         try
                         {
+                            //讀取檔案的當前內容，並轉為 List<string> 格式
                             var newContent = File.ReadAllLines(e.FullPath).ToList();
+                            //取得先前儲存的檔案快照，若不存在，使用List<string>作為預設值
                             var oldContent = FileContentSnapshots.GetOrAdd(e.FullPath, new List<string>());
 
                             // 找出新增的行
@@ -165,6 +188,7 @@ namespace FileDemo_1734
                                 }
                             }
 
+                            //將檔案的新內容更新至快照中，以便下次檢測變動時進行比較
                             FileContentSnapshots[e.FullPath] = newContent;
                             break;
                         }
@@ -181,6 +205,7 @@ namespace FileDemo_1734
                         }
                     }
 
+                    //更新LastChangedTimes中的變動時間，以便下次變動檢測時進行抑制
                     LastChangedTimes[e.FullPath] = DateTime.Now;
                 }
             }
@@ -193,6 +218,8 @@ namespace FileDemo_1734
         /// <param name="filesToMonitor"></param>
         private static void OnDeleted(FileSystemEventArgs e, string[] filesToMonitor)
         {
+            //Array.Exists 用來檢查 filesToMonitor 陣列中是否存在符合條件的檔案
+            //file => file == Path.GetFileName(e.FullPath)用來比較檔案名稱是否相等
             if (Array.Exists(filesToMonitor, file => file == Path.GetFileName(e.FullPath)))
             {
                 Console.WriteLine($"檔案: {e.FullPath} 已刪除");
