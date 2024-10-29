@@ -20,9 +20,9 @@ namespace FileDemo_1734
         /// </summary>
         private static Timer checkFilesTimer;
         /// <summary>
-        /// 30秒檢查一次檔案
+        /// 5秒檢查一次檔案
         /// </summary>
-        private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(5);
 
         static void Main(string[] args) 
         {
@@ -100,14 +100,16 @@ namespace FileDemo_1734
 
                 if (File.Exists(filePath))
                 {
+                    Console.WriteLine($"正在檢查檔案: {filePath}");
+
                     var newContent = File.ReadAllLines(filePath).ToList();
                     var oldContent = FileContentSnapshots.GetOrAdd(filePath, new List<string>());
 
-                    // 建立 HashSet 來儲存 oldContent 以便於快速查找
-                    var oldLinesSet = new HashSet<string>(oldContent);
+                    var newContentSet = new HashSet<string>(newContent);
+                    var oldContentSet = new HashSet<string>(oldContent);
 
-                    // 找出新增的行
-                    foreach (var line in newContent.Except(oldContent))
+                    // 找出新增的行（在新內容中存在但不在舊內容中）
+                    foreach (var line in newContentSet.Except(oldContentSet))
                     {
                         Console.WriteLine($"新增的行: {line}");
                     }
@@ -115,11 +117,11 @@ namespace FileDemo_1734
                     // 找出修改的行
                     if (newContent.Count == oldContent.Count)
                     {
-                        for (int i = 0; i < newContent.Count; i++)
+                        for (int j = 0; j < newContent.Count; j++)
                         {
-                            if (newContent[i] != oldContent[i])
+                            if (newContent[j] != oldContent[j])
                             {
-                                Console.WriteLine($"修改的行: 原內容 - {oldContent[i]}, 新內容 - {newContent[i]}");
+                                Console.WriteLine($"修改的行: 原內容 - {oldContent[j]}, 新內容 - {newContent[j]}");
                             }
                         }
                     }
@@ -129,6 +131,7 @@ namespace FileDemo_1734
                 }
             }
         }
+
 
     }
 }
