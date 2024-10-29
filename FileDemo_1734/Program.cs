@@ -160,6 +160,17 @@ namespace FileDemo_1734
                             //取得先前儲存的檔案快照，若不存在，使用List<string>作為預設值
                             var oldContent = FileContentSnapshots.GetOrAdd(e.FullPath, new List<string>());
 
+                            // 使用 HashSet 來比對被刪除的行
+                            //var oldLinesSet = new HashSet<string>(oldContent);
+                            //var newLinesSet = new HashSet<string>(newContent);
+
+                            // 找出被刪除的行
+                            //var deletedLines = oldLinesSet.Except(newLinesSet);
+                            //foreach (var line in deletedLines)
+                            //{
+                            //    Console.WriteLine($"刪除的行: {line}");
+                            //}
+
                             // 找出新增的行
                             if (newContent.Count > oldContent.Count)
                             {
@@ -168,14 +179,7 @@ namespace FileDemo_1734
                                     Console.WriteLine($"新增的行: {newContent[j]}");
                                 }
                             }
-                            // 找出刪除的行
-                            else if (newContent.Count < oldContent.Count)
-                            {
-                                for (int j = newContent.Count; j < oldContent.Count; j++)
-                                {
-                                    Console.WriteLine($"刪除的行: {oldContent[j]}");
-                                }
-                            }
+                            
                             // 找出修改的行
                             else
                             {
