@@ -161,15 +161,15 @@ namespace FileDemo_1734
                             var oldContent = FileContentSnapshots.GetOrAdd(e.FullPath, new List<string>());
 
                             // 使用 HashSet 來比對被刪除的行
-                            //var oldLinesSet = new HashSet<string>(oldContent);
-                            //var newLinesSet = new HashSet<string>(newContent);
+                            var oldLinesSet = new HashSet<string>(oldContent);
+                            var newLinesSet = new HashSet<string>(newContent);
 
                             // 找出被刪除的行
-                            //var deletedLines = oldLinesSet.Except(newLinesSet);
-                            //foreach (var line in deletedLines)
-                            //{
-                            //    Console.WriteLine($"刪除的行: {line}");
-                            //}
+                            var deletedLines = oldLinesSet.Except(newLinesSet);
+                            foreach (var line in deletedLines)
+                            {
+                                Console.WriteLine($"刪除的行: {line}");
+                            }
 
                             // 找出新增的行
                             if (newContent.Count > oldContent.Count)
