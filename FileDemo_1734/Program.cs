@@ -105,10 +105,11 @@ namespace FileDemo_1734
                     var newContent = File.ReadAllLines(filePath).ToList();
                     var oldContent = FileContentSnapshots.GetOrAdd(filePath, new List<string>());
 
+                    //HashSet<>用於查詢刪除插入具有較高的性能
                     var newContentSet = new HashSet<string>(newContent);
                     var oldContentSet = new HashSet<string>(oldContent);
 
-                    // 找出新增的行（在新內容中存在但不在舊內容中）
+                    // 找出新增的行（在newContentSet中存在但不在oldContentSet中）
                     foreach (var line in newContentSet.Except(oldContentSet))
                     {
                         Console.WriteLine($"新增的行: {line}");
