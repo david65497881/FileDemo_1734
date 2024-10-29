@@ -98,11 +98,14 @@ namespace FileDemo_1734
             {
                 string filePath = Path.Combine(config.DirectoryPath, file);
 
+                //使用File.Exists 方法來檢查 filePath 所指向的檔案是否存在
                 if (File.Exists(filePath))
                 {
                     Console.WriteLine($"正在檢查檔案: {filePath}");
 
+                    //使用 File.ReadAllLines 方法讀取檔案的每一行，並將結果存儲在 List<string> 中
                     var newContent = File.ReadAllLines(filePath).ToList();
+                    //使用 FileContentSnapshot取得舊的快照，GetOrAdd會檢查是否已有此檔案的快照，若有則返回舊內容。沒有就賦予一個新的List<string>作為預設值
                     var oldContent = FileContentSnapshots.GetOrAdd(filePath, new List<string>());
 
                     //HashSet<>用於查詢刪除插入具有較高的性能
