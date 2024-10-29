@@ -90,42 +90,45 @@ namespace FileDemo_1734
             }
         }
 
-        private static void CheckFileChange(object state) 
+        private static void CheckFileChange(object state)
         {
             Config config = (Config)state;
 
-            foreach (var file in config.FilesToMonitor) 
+            foreach (var file in config.FilesToMonitor)
             {
                 string filePath = Path.Combine(config.DirectoryPath, file);
 
-                if (File.Exists(filePath)) 
+                if (File.Exists(filePath))
                 {
                     var newContent = File.ReadAllLines(filePath).ToList();
                     var oldContent = FileContentSnapshots.GetOrAdd(filePath, new List<string>());
 
-                    if (newContent.Count > oldContent.Count)
+                    // 建立 HashSet 來儲存 oldContent 以便於快速查找
+                    var oldLinesSet = new HashSet<string>(oldContent);
+
+                    // 找出新增的行
+                    foreach (var line in newContent.Except(oldContent))
                     {
-                        for (int j = oldContent.Count; j < newContent.Count; j++)
+                        Console.WriteLine($"新增的行: {line}");
+                    }
+
+                    // 找出修改的行
+                    if (newContent.Count == oldContent.Count)
+                    {
+                        for (int i = 0; i < newContent.Count; i++)
                         {
-                            Console.WriteLine($"新增的行:{newContent[j]}");
+                            if (newContent[i] != oldContent[i])
+                            {
+                                Console.WriteLine($"修改的行: 原內容 - {oldContent[i]}, 新內容 - {newContent[i]}");
+                            }
                         }
                     }
-                    else 
-                    {
-                        for (int j = 0; j < newContent.Count; j++) 
-                        {
-                            if (newContent[j] != oldContent[j]) 
-                            {
-                                Console.WriteLine($"修改的行: 原內容 - {oldContent[j]}, 新內容 - {newContent[j]}");
-                            }
-                        } 
-                    }
 
-                    //更新快照
+                    // 更新快照
                     FileContentSnapshots[filePath] = newContent;
                 }
-
             }
         }
+
     }
 }
