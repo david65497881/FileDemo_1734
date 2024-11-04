@@ -141,10 +141,10 @@ namespace FileDemo_1734
                 }
 
                 // 清理快照以避免記憶體不足
-                if (FileContentSnapshots.Count > 1000)
+                if (FileContentSnapshots.Count > 10)
                 {
                     //.Take(100)是LINQ方法，從集合中取前100個元素。TryRemove可以在多執行緒中安全移除項目
-                    foreach (var key in FileContentSnapshots.Keys.Take(100))
+                    foreach (var key in FileContentSnapshots.Keys.Take(5))
                     {
                         FileContentSnapshots.TryRemove(key, out _);
                     }
