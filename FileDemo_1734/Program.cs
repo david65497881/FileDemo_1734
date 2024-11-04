@@ -91,13 +91,19 @@ namespace FileDemo_1734
             }
         }
 
-        // 新增方法，用於逐行讀取檔案，減少記憶體佔用
+        /// <summary>
+        /// 逐行讀取檔案，減少記憶體佔用
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
         private static List<string> ReadFileLines(string filePath)
         {
             var lines = new List<string>();
+            //使用StreamReader以讀取模式開啟檔案
             using (var reader = new StreamReader(filePath))
             {
                 string line;
+                //使用 while 迴圈逐行讀取檔案內容，ReadLine()方法每次讀取一行，直到讀到檔案末尾返回null
                 while ((line = reader.ReadLine()) != null)
                 {
                     lines.Add(line);
