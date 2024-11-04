@@ -48,12 +48,10 @@ namespace FileDemo_1734
                 {
                     int lineCount = ReadFileLines(filePath).Count;
                     FileContentLineCounts[filePath] = lineCount;
-                    Console.WriteLine($"初始化 {filePath} 行數: {lineCount}");
                 }
                 else
                 {
                     FileContentLineCounts[filePath] = 0;
-                    Console.WriteLine($"檔案 {filePath} 不存在，初始化行數為 0");
                 }
             }
 
@@ -93,7 +91,7 @@ namespace FileDemo_1734
             }
         }
 
-        // 用於逐行讀取檔案，減少記憶體佔用
+        // 新增方法，用於逐行讀取檔案，減少記憶體佔用
         private static List<string> ReadFileLines(string filePath)
         {
             var lines = new List<string>();
@@ -136,23 +134,13 @@ namespace FileDemo_1734
 
                                 // 更新快照中的行數
                                 FileContentLineCounts[filePath] = newContent.Count;
-                                Console.WriteLine($"更新 {filePath} 的行數為: {newContent.Count}");
-                            }
-                            else
-                            {
-                                Console.WriteLine($"檔案 {filePath} 沒有新的行增加");
                             }
                         }
                         else
                         {
                             // 如果檔案在快照中不存在，初始化其行數
                             FileContentLineCounts[filePath] = newContent.Count;
-                            Console.WriteLine($"檔案 {filePath} 第一次被監控，初始化行數為: {newContent.Count}");
                         }
-                    }
-                    else
-                    {
-                        Console.WriteLine($"檔案 {filePath} 不存在");
                     }
                 }
             }
