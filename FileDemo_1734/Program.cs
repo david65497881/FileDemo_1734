@@ -14,7 +14,7 @@ namespace FileDemo_1734
         /// <summary>
         /// 儲存檔案快照
         /// </summary>
-        private static ConcurrentDictionary<string,List<string>> FileContentSnapshots = new ConcurrentDictionary<string,List<string>>();
+        private static ConcurrentDictionary<string, List<string>> FileContentSnapshots = new ConcurrentDictionary<string, List<string>>();
         /// <summary>
         /// 定時器
         /// </summary>
@@ -24,7 +24,7 @@ namespace FileDemo_1734
         /// </summary>
         private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(5);
 
-        static void Main(string[] args) 
+        static void Main(string[] args)
         {
             //讀取config.json，並將config.json反序列化成config物件
             string jsonConfig = File.ReadAllText("config.json");
@@ -41,14 +41,17 @@ namespace FileDemo_1734
             DisplayMonitoredFiles(config.FilesToMonitor);
 
             //初始化每個檔案的快照
-            foreach(var file in config.FilesToMonitor)
+            foreach (var file in config.FilesToMonitor)
             {
+                //使用combine組合路徑
                 string filePath = Path.Combine(config.DirectoryPath, file);
+
+                //file.Exists用來檢查指定的檔案路徑是否存在
                 if (File.Exists(filePath))
                 {
                     FileContentSnapshots[filePath] = File.ReadAllLines(filePath).ToList();
                 }
-                else 
+                else
                 {
                     FileContentSnapshots[filePath] = new List<string>();
                 }
@@ -63,18 +66,18 @@ namespace FileDemo_1734
             checkFilesTimer?.Dispose();
         }
 
-        private static void FolderFileCreate(string directoryPath, string[] filesToMonitor) 
+        private static void FolderFileCreate(string directoryPath, string[] filesToMonitor)
         {
-            if(!Directory.Exists(directoryPath)) 
+            if (!Directory.Exists(directoryPath))
             {
                 Directory.CreateDirectory(directoryPath);
                 Console.WriteLine($"已建立目錄:{directoryPath}");
             }
 
-            foreach (var file in filesToMonitor) 
+            foreach (var file in filesToMonitor)
             {
                 string filePath = Path.Combine(directoryPath, file);
-                if (!File.Exists(filePath)) 
+                if (!File.Exists(filePath))
                 {
                     File.Create(filePath).Dispose();
                     Console.WriteLine($"已建立檔案:{filePath}");
@@ -82,7 +85,7 @@ namespace FileDemo_1734
             }
         }
 
-        private static void DisplayMonitoredFiles(string[] fileToMonitor) 
+        private static void DisplayMonitoredFiles(string[] fileToMonitor)
         {
             foreach (var file in fileToMonitor)
             {
@@ -92,50 +95,64 @@ namespace FileDemo_1734
 
         private static void CheckFileChange(object state)
         {
-            Config config = (Config)state;
-
-            foreach (var file in config.FilesToMonitor)
+            try
             {
-                string filePath = Path.Combine(config.DirectoryPath, file);
+                Config config = (Config)state;
 
-                //使用File.Exists 方法來檢查 filePath 所指向的檔案是否存在
-                if (File.Exists(filePath))
+                foreach (var file in config.FilesToMonitor)
                 {
-                    Console.WriteLine($"正在檢查檔案: {filePath}");
+                    string filePath = Path.Combine(config.DirectoryPath, file);
 
-                    //使用 File.ReadAllLines 方法讀取檔案的每一行，並將結果存儲在 List<string> 中
-                    var newContent = File.ReadAllLines(filePath).ToList();
-                    //使用 FileContentSnapshot取得舊的快照，GetOrAdd會檢查是否已有此檔案的快照，若有則返回舊內容。沒有就賦予一個新的List<string>作為預設值
-                    var oldContent = FileContentSnapshots.GetOrAdd(filePath, new List<string>());
-
-                    //HashSet<>用於查詢刪除插入具有較高的性能
-                    var newContentSet = new HashSet<string>(newContent);
-                    var oldContentSet = new HashSet<string>(oldContent);
-
-                    // 找出新增的行（在newContentSet中存在但不在oldContentSet中）
-                    foreach (var line in newContentSet.Except(oldContentSet))
+                    //使用File.Exists 方法來檢查 filePath 所指向的檔案是否存在
+                    if (File.Exists(filePath))
                     {
-                        Console.WriteLine($"新增的行: {line}");
-                    }
+                        Console.WriteLine($"正在檢查檔案: {filePath}");
 
-                    // 找出修改的行
-                    if (newContent.Count == oldContent.Count)
-                    {
-                        for (int j = 0; j < newContent.Count; j++)
+                        //使用 File.ReadAllLines 方法讀取檔案的每一行，並將結果存儲在 List<string> 中
+                        var newContent = File.ReadAllLines(filePath).ToList();
+                        //使用 FileContentSnapshot取得舊的快照，GetOrAdd會檢查是否已有此檔案的快照，若有則返回舊內容。沒有就賦予一個新的List<string>作為預設值
+                        var oldContent = FileContentSnapshots.GetOrAdd(filePath, new List<string>());
+
+                        //HashSet<>用於查詢刪除插入具有較高的性能
+                        var newContentSet = new HashSet<string>(newContent);
+                        var oldContentSet = new HashSet<string>(oldContent);
+
+                        // 找出新增的行(在newContentSet中存在但不在oldContentSet中)
+                        foreach (var line in newContentSet.Except(oldContentSet))
                         {
-                            if (newContent[j] != oldContent[j])
+                            Console.WriteLine($"新增的行: {line}");
+                        }
+
+                        // 找出修改的行
+                        if (newContent.Count == oldContent.Count)
+                        {
+                            for (int j = 0; j < newContent.Count; j++)
                             {
-                                Console.WriteLine($"修改的行: 原內容 - {oldContent[j]}, 新內容 - {newContent[j]}");
+                                if (newContent[j] != oldContent[j])
+                                {
+                                    Console.WriteLine($"修改的行: 原內容 - {oldContent[j]}, 新內容 - {newContent[j]}");
+                                }
                             }
                         }
-                    }
 
-                    // 更新快照
-                    FileContentSnapshots[filePath] = newContent;
+                        // 更新快照
+                        FileContentSnapshots[filePath] = newContent;
+                    }
+                }
+
+                // 清理快照以避免記憶體不足
+                if (FileContentSnapshots.Count > 1000)
+                {
+                    foreach (var key in FileContentSnapshots.Keys.Take(100))
+                    {
+                        FileContentSnapshots.TryRemove(key, out _);
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"發生錯誤: {ex.Message}");
+            }
         }
-
-
     }
 }
