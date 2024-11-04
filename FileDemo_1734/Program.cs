@@ -160,7 +160,7 @@ namespace FileDemo_1734
                 // 清理快照以避免記憶體不足
                 if (FileContentSnapshots.Count > 10)
                 {
-                    // 加入註解：移除過舊的快照以釋放記憶體
+                    //移除過舊的快照以釋放記憶體
                     foreach (var key in FileContentSnapshots.Keys.Take(5))
                     {
                         FileContentSnapshots.TryRemove(key, out _);
