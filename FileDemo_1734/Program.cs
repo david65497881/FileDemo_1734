@@ -94,7 +94,9 @@ namespace FileDemo_1734
             }
         }
 
+
         // 新增方法，用於逐行讀取檔案，減少記憶體佔用
+        //使用 while 迴圈來逐行讀取檔案，reader.ReadLine() 方法會讀取檔案中的一行並將其賦值給 line。
         private static List<string> ReadFileLines(string filePath)
         {
             var lines = new List<string>();
@@ -106,7 +108,7 @@ namespace FileDemo_1734
                     lines.Add(line);
                 }
             }
-            return lines;
+                return lines;
         }
 
         private static void CheckFileChange(object state)
