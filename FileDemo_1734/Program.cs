@@ -49,7 +49,8 @@ namespace FileDemo_1734
                 //file.Exists用來檢查指定的檔案路徑是否存在
                 if (File.Exists(filePath))
                 {
-                    FileContentSnapshots[filePath] = File.ReadAllLines(filePath).ToList();
+                    // 將每個檔案逐行讀取並儲存，以避免載入整個檔案到記憶體
+                    FileContentSnapshots[filePath] = ReadFileLines(filePath);
                 }
                 else
                 {
@@ -93,6 +94,21 @@ namespace FileDemo_1734
             }
         }
 
+        // 新增方法，用於逐行讀取檔案，減少記憶體佔用
+        private static List<string> ReadFileLines(string filePath)
+        {
+            var lines = new List<string>();
+            using (var reader = new StreamReader(filePath))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    lines.Add(line);
+                }
+            }
+            return lines;
+        }
+
         private static void CheckFileChange(object state)
         {
             try
@@ -108,9 +124,8 @@ namespace FileDemo_1734
                     {
                         Console.WriteLine($"正在檢查檔案: {filePath}");
 
-                        //使用 File.ReadAllLines 方法讀取檔案的每一行，並將結果存儲在 List<string> 中
-                        var newContent = File.ReadAllLines(filePath).ToList();
-                        //使用 FileContentSnapshot取得舊的快照，GetOrAdd會檢查是否已有此檔案的快照，若有則返回舊內容。沒有就賦予一個新的List<string>作為預設值
+                        // 改用逐行讀取檔案來避免過大的記憶體佔用
+                        var newContent = ReadFileLines(filePath);
                         var oldContent = FileContentSnapshots.GetOrAdd(filePath, new List<string>());
 
                         //HashSet<>用於查詢刪除插入具有較高的性能
@@ -143,7 +158,7 @@ namespace FileDemo_1734
                 // 清理快照以避免記憶體不足
                 if (FileContentSnapshots.Count > 10)
                 {
-                    //.Take(100)是LINQ方法，從集合中取前100個元素。TryRemove可以在多執行緒中安全移除項目
+                    // 加入註解：移除過舊的快照以釋放記憶體
                     foreach (var key in FileContentSnapshots.Keys.Take(5))
                     {
                         FileContentSnapshots.TryRemove(key, out _);
