@@ -2,69 +2,97 @@
 using System.IO;
 using System.Text.Json;
 using System.Collections.Concurrent;
-using System.Threading;
-using FileDemo_1734.Class;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
+using FileDemo_1734.Class;
+using System.Threading;
 
 namespace FileDemo_1734
 {
     public class Program
     {
-        /// <summary>
-        /// 儲存檔案快照
-        /// </summary>
-        private static ConcurrentDictionary<string, List<string>> FileContentSnapshots = new ConcurrentDictionary<string, List<string>>();
-        /// <summary>
-        /// 定時器
-        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        struct FILE_ID_INFO
+        {
+            public ulong VolumeSerialNumber;
+            public ulong FileIdHigh;
+            public ulong FileIdLow;
+        }
+
+        [DllImport("Kernel32.dll", SetLastError = true)]
+        private static extern IntPtr CreateFile(
+            string fileName,
+            uint desiredAccess,
+            uint shareMode,
+            IntPtr securityAttributes,
+            uint creationDisposition,
+            uint flagsAndAttributes,
+            IntPtr templateFile);
+
+        [DllImport("Kernel32.dll", SetLastError = true)]
+        private static extern bool GetFileInformationByHandleEx(
+            IntPtr hFile,
+            int fileInformationClass,
+            out FILE_ID_INFO lpFileInformation,
+            uint dwBufferSize);
+
+        private const uint GENERIC_READ = 0x80000000;
+        private const uint FILE_SHARE_READ = 0x00000001;
+        private const uint OPEN_EXISTING = 3;
+
+        private static ConcurrentDictionary<FILE_ID_INFO, List<string>> FileContentSnapshots = new ConcurrentDictionary<FILE_ID_INFO, List<string>>();
         private static Timer checkFilesTimer;
-        /// <summary>
-        /// 5秒檢查一次檔案
-        /// </summary>
         private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(5);
 
         static void Main(string[] args)
         {
-            //讀取config.json，並將config.json反序列化成config物件
             string jsonConfig = File.ReadAllText("config.json");
             Config config = JsonSerializer.Deserialize<Config>(jsonConfig);
 
-            //設定監控位置。使用@來避免使用跳脫字符
             string monitorDirectory = @"C:\temp\TEST";
             config.DirectoryPath = monitorDirectory;
 
-            //檢查並建立目錄以及檔案
             FolderFileCreate(monitorDirectory, config.FilesToMonitor);
 
             Console.WriteLine($"正在監控目錄:{config.DirectoryPath}");
             DisplayMonitoredFiles(config.FilesToMonitor);
 
-            //初始化每個檔案的快照
             foreach (var file in config.FilesToMonitor)
             {
-                //使用combine組合路徑
                 string filePath = Path.Combine(config.DirectoryPath, file);
-
-                //file.Exists用來檢查指定的檔案路徑是否存在
                 if (File.Exists(filePath))
                 {
-                    // 將每個檔案逐行讀取並儲存，以避免載入整個檔案到記憶體
-                    FileContentSnapshots[filePath] = ReadFileLines(filePath);
-                }
-                else
-                {
-                    FileContentSnapshots[filePath] = new List<string>();
+                    var fileId = GetFileId(filePath);
+                    if (fileId != null)
+                    {
+                        FileContentSnapshots[fileId.Value] = ReadFileLines(filePath);
+                    }
                 }
             }
 
-            //啟動定時器，每隔CheckInterval所設定的秒數檢查一次檔案
             checkFilesTimer = new Timer(CheckFileChange, config, TimeSpan.Zero, CheckInterval);
-
             Console.WriteLine("按下 'q' 鍵結束程式。");
             while (Console.Read() != 'q') ;
 
             checkFilesTimer?.Dispose();
+        }
+
+        private static FILE_ID_INFO? GetFileId(string filePath)
+        {
+            IntPtr handle = CreateFile(filePath, GENERIC_READ, FILE_SHARE_READ, IntPtr.Zero, OPEN_EXISTING, 0, IntPtr.Zero);
+            if (handle == IntPtr.Zero)
+            {
+                return null;
+            }
+
+            FILE_ID_INFO fileIdInfo;
+            if (GetFileInformationByHandleEx(handle, 18, out fileIdInfo, (uint)Marshal.SizeOf<FILE_ID_INFO>()))
+            {
+                return fileIdInfo;
+            }
+
+            return null;
         }
 
         private static void FolderFileCreate(string directoryPath, string[] filesToMonitor)
@@ -94,9 +122,6 @@ namespace FileDemo_1734
             }
         }
 
-
-        // 新增方法，用於逐行讀取檔案，減少記憶體佔用
-        //使用 while 迴圈來逐行讀取檔案，reader.ReadLine() 方法會讀取檔案中的一行並將其賦值給 line。
         private static List<string> ReadFileLines(string filePath)
         {
             var lines = new List<string>();
@@ -108,7 +133,7 @@ namespace FileDemo_1734
                     lines.Add(line);
                 }
             }
-                return lines;
+            return lines;
         }
 
         private static void CheckFileChange(object state)
@@ -120,47 +145,42 @@ namespace FileDemo_1734
                 foreach (var file in config.FilesToMonitor)
                 {
                     string filePath = Path.Combine(config.DirectoryPath, file);
-
-                    //使用File.Exists 方法來檢查 filePath 所指向的檔案是否存在
                     if (File.Exists(filePath))
                     {
                         Console.WriteLine($"正在檢查檔案: {filePath}");
 
-                        // 改用逐行讀取檔案來避免過大的記憶體佔用
-                        var newContent = ReadFileLines(filePath);
-                        var oldContent = FileContentSnapshots.GetOrAdd(filePath, new List<string>());
-
-                        //HashSet<>用於查詢刪除插入具有較高的性能
-                        var newContentSet = new HashSet<string>(newContent);
-                        var oldContentSet = new HashSet<string>(oldContent);
-
-                        // 找出新增的行(在newContentSet中存在但不在oldContentSet中)
-                        foreach (var line in newContentSet.Except(oldContentSet))
+                        var fileId = GetFileId(filePath);
+                        if (fileId != null)
                         {
-                            Console.WriteLine($"新增的行: {line}");
-                        }
+                            var newContent = ReadFileLines(filePath);
+                            var oldContent = FileContentSnapshots.GetOrAdd(fileId.Value, new List<string>());
 
-                        // 找出修改的行
-                        if (newContent.Count == oldContent.Count)
-                        {
-                            for (int j = 0; j < newContent.Count; j++)
+                            var newContentSet = new HashSet<string>(newContent);
+                            var oldContentSet = new HashSet<string>(oldContent);
+
+                            foreach (var line in newContentSet.Except(oldContentSet))
                             {
-                                if (newContent[j] != oldContent[j])
+                                Console.WriteLine($"新增的行: {line}");
+                            }
+
+                            if (newContent.Count == oldContent.Count)
+                            {
+                                for (int j = 0; j < newContent.Count; j++)
                                 {
-                                    Console.WriteLine($"修改的行: 原內容 - {oldContent[j]}, 新內容 - {newContent[j]}");
+                                    if (newContent[j] != oldContent[j])
+                                    {
+                                        Console.WriteLine($"修改的行: 原內容 - {oldContent[j]}, 新內容 - {newContent[j]}");
+                                    }
                                 }
                             }
-                        }
 
-                        // 更新快照
-                        FileContentSnapshots[filePath] = newContent;
+                            FileContentSnapshots[fileId.Value] = newContent;
+                        }
                     }
                 }
 
-                // 清理快照以避免記憶體不足
                 if (FileContentSnapshots.Count > 10)
                 {
-                    // 加入註解：移除過舊的快照以釋放記憶體
                     foreach (var key in FileContentSnapshots.Keys.Take(5))
                     {
                         FileContentSnapshots.TryRemove(key, out _);
