@@ -12,7 +12,7 @@ namespace FileDemo_1734
     public class Program
     {
         /// <summary>
-        /// 儲存檔案快照和最後讀取的行數
+        /// 儲存檔案快照和最後讀取的行數。string為鍵，代表檔案的名稱、int為質，代表檔案的行數快照
         /// </summary>
         private static ConcurrentDictionary<string, int> FileContentLineCounts = new ConcurrentDictionary<string, int>();
         /// <summary>
@@ -64,6 +64,11 @@ namespace FileDemo_1734
             checkFilesTimer?.Dispose();
         }
 
+        /// <summary>
+        /// 建立資料夾檔案
+        /// </summary>
+        /// <param name="directoryPath"></param>
+        /// <param name="filesToMonitor"></param>
         private static void FolderFileCreate(string directoryPath, string[] filesToMonitor)
         {
             if (!Directory.Exists(directoryPath))
@@ -83,6 +88,10 @@ namespace FileDemo_1734
             }
         }
 
+        /// <summary>
+        /// 印出監控檔案字串
+        /// </summary>
+        /// <param name="fileToMonitor"></param>
         private static void DisplayMonitoredFiles(string[] fileToMonitor)
         {
             foreach (var file in fileToMonitor)
@@ -112,6 +121,10 @@ namespace FileDemo_1734
             return lines;
         }
 
+        /// <summary>
+        /// 監測檔案變化的方法
+        /// </summary>
+        /// <param name="state"></param>
         private static void CheckFileChange(object state)
         {
             try
@@ -128,6 +141,7 @@ namespace FileDemo_1734
                         Console.WriteLine($"正在檢查檔案: {filePath}");
 
                         var newContent = ReadFileLines(filePath);
+                        //.TryGetValue用來取得FileContentLineCounts裡最後讀取的行數
                         if (FileContentLineCounts.TryGetValue(filePath, out int previousLineCount))
                         {
                             // 檢查新增加的行
