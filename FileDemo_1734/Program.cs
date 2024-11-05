@@ -71,6 +71,7 @@ namespace FileDemo_1734
         /// <param name="filesToMonitor"></param>
         private static void FolderFileCreate(string directoryPath, string[] filesToMonitor)
         {
+            //Directory.Exists()會傳回布林值。Directory可以用來執行與目錄相關的操作，如新增刪除移動以及檢查目錄存在等
             if (!Directory.Exists(directoryPath))
             {
                 Directory.CreateDirectory(directoryPath);
