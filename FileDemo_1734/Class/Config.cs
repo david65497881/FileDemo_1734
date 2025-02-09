@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FileDemo_1734.Class
+namespace FileDemo_2025.Class
 {
     public class Config
     {
